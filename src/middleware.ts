@@ -2,12 +2,12 @@ import { withAuth } from 'next-auth/middleware'
 
 export default withAuth({
   callbacks: {
-    authorized({ token, req }) {
-      if (req.nextUrl.pathname.includes('/admin')) {
-        return !!token
-      }
-      return true
+    authorized({ token }) {
+      return !!token
     },
+  },
+  pages: {
+    signIn: '/api/auth/signin',
   },
 })
 
