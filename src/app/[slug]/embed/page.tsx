@@ -1,6 +1,13 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 
+type EmbedPost = {
+  id: string
+  title: string
+  status: string
+  _count: { upvotes: number }
+}
+
 export default async function EmbedPage({
   params,
 }: {
@@ -40,7 +47,7 @@ export default async function EmbedPage({
       <p style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '10px' }}>
         {workspace.name} — Feedback
       </p>
-      {posts.map(post => (
+      {posts.map((post: EmbedPost) => (
         <div
           key={post.id}
           style={{
@@ -79,7 +86,7 @@ export default async function EmbedPage({
           </div>
         </div>
       ))}
-        <a
+      <a
         href={`/${slug}`}
         style={{ display: 'block', textAlign: 'center', fontSize: '11px', color: '#6b7280', marginTop: '8px' }}
         target="_blank"

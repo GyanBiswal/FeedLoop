@@ -64,7 +64,7 @@ export default function AdminPage() {
 
   async function handleStatusChange(postId: string, newStatus: string) {
     setPosts(prev =>
-      prev.map(p => (p.id === postId ? { ...p, status: newStatus } : p))
+      prev.map((p: Post) => (p.id === postId ? { ...p, status: newStatus } : p))
     )
     const res = await fetch(`/api/posts/${postId}/status`, {
       method: 'PATCH',
@@ -76,14 +76,13 @@ export default function AdminPage() {
       fetchPosts()
     } else {
       const updated = await res.json()
-      setPosts(prev => prev.map(p => (p.id === postId ? { ...p, ...updated } : p)))
+      setPosts(prev => prev.map((p: Post) => (p.id === postId ? { ...p, ...updated } : p)))
     }
   }
 
   async function handleCluster(postId: string) {
     setClustering(postId)
     const res = await fetch(`/api/posts/${postId}/cluster`, { method: 'POST' })
-    const data = await res.json()
     if (res.ok) {
       await fetchPosts()
     } else {
@@ -100,13 +99,12 @@ export default function AdminPage() {
     )
   }
 
-  const postsByStatus = STATUSES.reduce((acc, s) => {
-    acc[s] = posts.filter(p => p.status === s)
+  const postsByStatus = STATUSES.reduce((acc: Record<string, Post[]>, s: string) => {
+    acc[s] = posts.filter((p: Post) => p.status === s)
     return acc
   }, {} as Record<string, Post[]>)
 
-  // count cluster siblings
-  const clusterCounts = posts.reduce((acc, p) => {
+  const clusterCounts = posts.reduce((acc: Record<string, number>, p: Post) => {
     if (p.clusterId) {
       acc[p.clusterId] = (acc[p.clusterId] ?? 0) + 1
     }
@@ -124,10 +122,7 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <a
-              href={`/${slug}`}
-              className="text-sm text-gray-500 hover:text-black"
-            >
+            <a href={`/${slug}`} className="text-sm text-gray-500 hover:text-black">
               ← Public board
             </a>
             <span className="text-sm text-gray-500">{session?.user?.name}</span>
@@ -156,7 +151,7 @@ export default function AdminPage() {
                 <p className="text-xs text-gray-400 text-center py-4">No posts</p>
               )}
 
-              {postsByStatus[s].map(post => (
+              {postsByStatus[s].map((post: Post) => (
                 <div key={post.id} className="bg-white rounded-lg shadow-sm p-3 space-y-2">
                   <p className="text-sm font-medium text-gray-900">{post.title}</p>
 
@@ -164,14 +159,12 @@ export default function AdminPage() {
                     <p className="text-xs text-gray-500 line-clamp-2">{post.description}</p>
                   )}
 
-                  {/* Cluster badge */}
                   {post.clusterId && clusterCounts[post.clusterId] > 1 && (
                     <span className="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                       Similar to {clusterCounts[post.clusterId] - 1} other post{clusterCounts[post.clusterId] - 1 > 1 ? 's' : ''}
                     </span>
                   )}
 
-                  {/* Changelog preview */}
                   {post.changelog && (
                     <p className="text-xs text-green-700 bg-green-50 rounded p-2 italic">
                       {post.changelog}
