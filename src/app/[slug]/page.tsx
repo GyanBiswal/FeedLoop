@@ -22,6 +22,8 @@ export default function WorkspacePage() {
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [upvoted, setUpvoted] = useState<Record<string, boolean>>({})
+  const [subEmail, setSubEmail] = useState('')
+  const [subDone, setSubDone] = useState(false)
 
   async function fetchPosts() {
     const res = await fetch(`/api/posts?slug=${slug}`)
@@ -52,7 +54,6 @@ export default function WorkspacePage() {
       signIn('github')
       return
     }
-    // optimistic update
     setUpvoted(prev => ({ ...prev, [postId]: !prev[postId] }))
     setPosts(prev =>
       prev.map(p =>
@@ -69,6 +70,16 @@ export default function WorkspacePage() {
       )
     )
     await fetch(`/api/posts/${postId}/upvote`, { method: 'POST' })
+  }
+
+  async function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault()
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: subEmail, workspaceSlug: slug }),
+    })
+    setSubDone(true)
   }
 
   const statusColors: Record<string, string> = {
@@ -111,6 +122,32 @@ export default function WorkspacePage() {
           </div>
         </div>
 
+        {/* Subscribe form */}
+        <div className="bg-white rounded-xl shadow p-5">
+          {subDone ? (
+            <p className="text-sm text-green-600 font-medium">
+              ✅ You're subscribed! We'll email you when features ship.
+            </p>
+          ) : (
+            <form onSubmit={handleSubscribe} className="flex gap-2">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={subEmail}
+                onChange={e => setSubEmail(e.target.value)}
+                required
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <button
+                type="submit"
+                className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-800"
+              >
+                Get updates
+              </button>
+            </form>
+          )}
+        </div>
+
         {/* Submit form */}
         <div className="bg-white rounded-xl shadow p-6 space-y-3">
           <h2 className="font-semibold text-gray-800">Submit feedback</h2>
@@ -121,14 +158,14 @@ export default function WorkspacePage() {
               value={title}
               onChange={e => setTitle(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black text-stone-900"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
             />
             <textarea
               placeholder="More details (optional)"
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black text-stone-900"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
             />
             <button
               type="submit"

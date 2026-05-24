@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { groq } from '@/lib/groq'
+import { resend } from '@/lib/resend'
 
 export async function PATCH(
   req: Request,
@@ -23,7 +24,10 @@ export async function PATCH(
 
   const post = await prisma.post.findUnique({
     where: { id },
-    include: { workspace: { include: { members: true } } },
+    include: {
+      workspace: { include: { members: true } },
+      upvotes: { include: { user: true } },
+    },
   })
 
   if (!post) {
@@ -41,6 +45,7 @@ export async function PATCH(
   let changelog: string | undefined
 
   if (status === 'DONE' && post.status !== 'DONE') {
+    // generate changelog
     try {
       const completion = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
@@ -61,6 +66,61 @@ export async function PATCH(
     } catch (e) {
       console.error('Groq changelog error:', e)
     }
+
+    // send emails to subscribers
+    try {
+      const subscriptions = await prisma.subscription.findMany({
+        where: { workspaceId: post.workspaceId },
+      })
+
+      const upvoterEmails = post.upvotes
+        .map(u => u.user.email)
+        .filter(Boolean) as string[]
+
+      const allEmails = [
+        ...new Set([...subscriptions.map(s => s.email), ...upvoterEmails]),
+      ]
+
+      if (allEmails.length > 0) {
+        await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL!,
+          to: allEmails,
+          subject: `✅ "${post.title}" has shipped!`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
+              <h2>🎉 A feature you requested just shipped!</h2>
+              <h3>${post.title}</h3>
+              ${changelog ? `<p>${changelog}</p>` : ''}
+              <p style="color: #666;">Thanks for your feedback on ${post.workspace.name}.</p>
+            </div>
+          `,
+        })
+      }
+    } catch (e) {
+      console.error('Resend email error:', e)
+    }
+  }
+
+  // fire webhook
+  try {
+    const webhooks = await prisma.webhook.findMany({
+      where: { workspaceId: post.workspaceId },
+    })
+    for (const webhook of webhooks) {
+      fetch(webhook.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'status.changed',
+          postId: post.id,
+          title: post.title,
+          status,
+          workspaceSlug: post.workspace.slug,
+        }),
+      }).catch(e => console.error('Webhook error:', e))
+    }
+  } catch (e) {
+    console.error('Webhook fetch error:', e)
   }
 
   const updated = await prisma.post.update({
