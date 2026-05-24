@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
+import { Post } from '@prisma/client'
 
 export default async function ChangelogPage({
   params,
@@ -46,7 +47,7 @@ export default async function ChangelogPage({
         )}
 
         <div className="space-y-6">
-          {posts.map(post => (
+          {posts.map((post: Post) => (
             <div key={post.id} className="bg-white rounded-xl shadow p-6 space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900">{post.title}</h2>
