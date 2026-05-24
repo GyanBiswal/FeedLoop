@@ -5,6 +5,11 @@ import { prisma } from '@/lib/prisma'
 import { groq } from '@/lib/groq'
 import { resend } from '@/lib/resend'
 
+type WorkspaceMember = {
+  userId: string
+  role: string
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -35,7 +40,7 @@ export async function PATCH(
   }
 
   const member = post.workspace.members.find(
-    m => m.userId === session.user.id
+    (m: WorkspaceMember) => m.userId === session.user.id
   )
 
   if (!member || member.role === 'MEMBER') {
@@ -45,7 +50,6 @@ export async function PATCH(
   let changelog: string | undefined
 
   if (status === 'DONE' && post.status !== 'DONE') {
-    // generate changelog
     try {
       const completion = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
@@ -67,18 +71,17 @@ export async function PATCH(
       console.error('Groq changelog error:', e)
     }
 
-    // send emails to subscribers
     try {
       const subscriptions = await prisma.subscription.findMany({
         where: { workspaceId: post.workspaceId },
       })
 
       const upvoterEmails = post.upvotes
-        .map(u => u.user.email)
+        .map((u: { user: { email: string } }) => u.user.email)
         .filter(Boolean) as string[]
 
       const allEmails = [
-        ...new Set([...subscriptions.map(s => s.email), ...upvoterEmails]),
+        ...new Set([...subscriptions.map((s: { email: string }) => s.email), ...upvoterEmails]),
       ]
 
       if (allEmails.length > 0) {
@@ -101,12 +104,11 @@ export async function PATCH(
     }
   }
 
-  // fire webhook
   try {
     const webhooks = await prisma.webhook.findMany({
       where: { workspaceId: post.workspaceId },
     })
-    for (const webhook of webhooks) {
+    for (const webhook of webhooks as { url: string }[]) {
       fetch(webhook.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +119,7 @@ export async function PATCH(
           status,
           workspaceSlug: post.workspace.slug,
         }),
-      }).catch(e => console.error('Webhook error:', e))
+      }).catch((e: unknown) => console.error('Webhook error:', e))
     }
   } catch (e) {
     console.error('Webhook fetch error:', e)

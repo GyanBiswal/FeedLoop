@@ -27,6 +27,14 @@ export default function SettingsPage() {
     setSaving(false)
   }
 
+  if (status === 'loading') {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-xl mx-auto space-y-6">
@@ -51,9 +59,7 @@ export default function SettingsPage() {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
             />
-            {saved && (
-              <p className="text-green-600 text-sm">✅ Webhook saved!</p>
-            )}
+            {saved && <p className="text-green-600 text-sm">✅ Webhook saved!</p>}
             <button
               type="submit"
               disabled={saving}

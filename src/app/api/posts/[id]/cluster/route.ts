@@ -4,6 +4,17 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateEmbedding, cosineSimilarity } from '@/lib/embeddings'
 
+type WorkspaceMember = {
+  userId: string
+  role: string
+}
+
+type PostWithEmbedding = {
+  id: string
+  embedding: number[]
+  clusterId: string | null
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -24,16 +35,16 @@ export async function POST(
     return NextResponse.json({ error: 'Post not found' }, { status: 404 })
   }
 
-  const member = post.workspace.members.find(m => m.userId === session.user.id)
+  const member = post.workspace.members.find(
+    (m: WorkspaceMember) => m.userId === session.user.id
+  )
   if (!member || member.role === 'MEMBER') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // generate embedding for this post
   const text = `${post.title} ${post.description ?? ''}`
   const embedding = await generateEmbedding(text)
 
-  // get all other posts in workspace with embeddings
   const allPosts = await prisma.post.findMany({
     where: {
       workspaceId: post.workspaceId,
@@ -42,13 +53,11 @@ export async function POST(
     },
   })
 
-  // find similar posts (cosine similarity > 0.75)
-  const similar = allPosts.filter(p => {
+  const similar = (allPosts as PostWithEmbedding[]).filter(p => {
     if (!p.embedding?.length) return false
     return cosineSimilarity(embedding, p.embedding) > 0.75
   })
 
-  // assign cluster id
   const clusterId =
     similar.length > 0
       ? (similar[0].clusterId ?? similar[0].id)
@@ -56,10 +65,7 @@ export async function POST(
 
   await prisma.post.update({
     where: { id },
-    data: {
-      embedding,
-      clusterId,
-    },
+    data: { embedding, clusterId },
   })
 
   return NextResponse.json({ clusterId, similarCount: similar.length })
