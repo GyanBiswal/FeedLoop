@@ -18,7 +18,7 @@ export default async function AdminPage({
   if (!workspace) notFound()
 
   const member = workspace.members.find(
-    m => m.user.email === session.user?.email
+    (m: any) => m.user.email === session.user?.email
   )
 
   if (!member || member.role === 'MEMBER') {
