@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+type WorkspaceMember = {
+  userId: string
+  role: string
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -27,7 +32,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
   }
 
-  const member = workspace.members.find(m => m.userId === session.user.id)
+  const member = workspace.members.find(
+    (m: WorkspaceMember) => m.userId === session.user.id
+  )
   if (!member || member.role === 'MEMBER') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
