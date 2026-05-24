@@ -28,9 +28,14 @@ export async function POST(req: Request) {
     },
     update: {},
     create: {
-      email,
-      workspaceId: workspace.id,
-    },
+        email,
+        workspaceId: workspace.id,
+        user: {
+            connect: {
+            email,
+            },
+        },
+    }
   })
 
   return NextResponse.json({ success: true })
