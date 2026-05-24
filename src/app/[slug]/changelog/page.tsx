@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
-import { Post } from '@prisma/client'
+
+type Post = {
+  id: string
+  title: string
+  changelog: string | null
+  updatedAt: Date
+}
 
 export default async function ChangelogPage({
   params,
@@ -32,10 +38,7 @@ export default async function ChangelogPage({
             <h1 className="text-2xl font-bold text-gray-900">{workspace.name}</h1>
             <p className="text-sm text-gray-500 mt-1">Changelog</p>
           </div>
-          <a
-            href={`/${slug}`}
-            className="text-sm text-gray-500 hover:text-black"
-          >
+          <a href={`/${slug}`} className="text-sm text-gray-500 hover:text-black">
             ← Back to board
           </a>
         </div>
